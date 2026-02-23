@@ -4,54 +4,37 @@ let mode = 'AGENT';
 let recognition;
 let isListening = false;
 
-// FORSOWANIE MĘSKIEGO GŁOSU
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    
-    // Szukamy specyficznych męskich głosów dostępnych w Android/Chrome
-    let maleVoice = voices.find(v => v.lang.includes('pl') && (v.name.includes('Male') || v.name.includes('Męski') || v.name.includes('Standard-B')));
-    if (!maleVoice) maleVoice = voices.find(v => v.lang.includes('pl'));
-    
-    u.voice = maleVoice;
-    u.pitch = 0.7; // Bardzo niski ton
-    u.rate = 0.95;
+    u.lang = 'pl-PL';
+    u.pitch = 1.0; 
+    u.rate = 1.0;
     window.speechSynthesis.speak(u);
   }
 }
 
-// MIKROFON - INICJALIZACJA PRZY KLIKNIĘCIU (wymóg mobilny)
-function initMic() {
-  if (recognition) return;
+// NAPRAWA MIKROFONU
+if ('webkitSpeechRecognition' in window || 'speechRecognition' in window) {
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Speech) return alert("Twoja przeglądarka nie obsługuje mikrofonu. Użyj Chrome.");
-  
   recognition = new Speech();
   recognition.lang = 'pl-PL';
   recognition.continuous = true;
   recognition.interimResults = true;
 
   recognition.onresult = (e) => {
-    let transcript = '';
+    let text = '';
     for (let i = e.resultIndex; i < e.results.length; ++i) {
-      if (e.results[i].isFinal) transcript += e.results[i][0].transcript;
+      if (e.results[i].isFinal) text += e.results[i][0].transcript;
     }
-    if (transcript) {
-      document.getElementById('cmd').value += transcript + " ";
+    if (text) {
+      document.getElementById('cmd').value += text + " ";
     }
-  };
-  
-  recognition.onerror = (err) => {
-    console.error(err);
-    isListening = false;
-    document.getElementById('micBtn').classList.remove('active');
   };
 }
 
 async function handleMic() {
-  initMic();
   if (!isListening) {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -59,7 +42,7 @@ async function handleMic() {
       isListening = true;
       document.getElementById('micBtn').classList.add('active');
       document.getElementById('status').innerText = "SŁUCHAM...";
-    } catch(e) { alert("Brak uprawnień do mikrofonu."); }
+    } catch(e) { alert("Brak dostępu do mikrofonu!"); }
   } else {
     recognition.stop();
     isListening = false;
@@ -68,22 +51,17 @@ async function handleMic() {
   }
 }
 
-// POBIERANIE LISTY (Z OBSŁUGĄ BŁĘDÓW)
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=getTasks&tryb=${mode}`, { method: 'GET' });
+    const res = await fetch(`${SCRIPT_URL}?action=getTasks&tryb=${mode}`);
     const tasks = await res.json();
     list.innerHTML = '';
-    if (tasks.length === 0) {
-      list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px;">BRAK ZADAŃ</div>';
-    } else {
-      tasks.forEach(t => {
-        list.innerHTML += `<div class="task-item"><span class="task-status">${t.status}</span>${t.polecenie}</div>`;
-      });
-    }
+    tasks.forEach(t => {
+      list.innerHTML += `<div class="task-item"><span class="task-status">${t.status}</span>${t.polecenie}</div>`;
+    });
   } catch (e) {
-    list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px;">ŁĄCZENIE Z ARKUSZEM...</div>';
+    list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px;">POBIERAM DANE...</div>';
   }
 }
 
@@ -92,20 +70,19 @@ function send() {
   const deadline = document.getElementById('deadlineInput').value;
   if (!val) return;
   
-  document.getElementById('status').innerText = "WYSYŁANIE...";
-  
+  document.getElementById('status').innerText = "WYSYŁAM...";
   fetch(SCRIPT_URL, {
     method: "POST",
     mode: "no-cors",
     body: JSON.stringify({ polecenie: val, tryb: mode, deadline: deadline })
   }).then(() => {
-    speak("Przyjęte");
+    speak("Przyjęłam zadanie i zapisałam w arkuszu."); // RODZAJ ŻEŃSKI
     document.getElementById('cmd').value = "";
     document.getElementById('status').innerText = "ZAPISANO";
     setTimeout(() => { 
       document.getElementById('status').innerText = "KONOPEK";
       fetchTasks(); 
-    }, 1000);
+    }, 1500);
   });
 }
 
@@ -114,12 +91,11 @@ function setMode(m) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('t-' + m).classList.add('active');
   document.getElementById('deadlineInput').style.display = (m === 'JA') ? 'block' : 'none';
-  speak("Sekcja " + (m === 'AGENT' ? 'Zespół' : (m === 'JA' ? 'Szef' : 'Pomysł')));
+  
+  // RODZAJ ŻEŃSKI
+  const msg = (m === 'AGENT') ? "Przełączyłam na tryb zespołu." : (m === 'JA' ? "Jestem w trybie szefa." : "Zapamiętam Twój pomysł.");
+  speak(msg);
   fetchTasks();
 }
 
-// WYMUSZENIE GŁOSÓW I LISTY PRZY STARCIE
-window.onload = () => {
-  window.speechSynthesis.getVoices();
-  setTimeout(fetchTasks, 2000);
-};
+window.onload = () => { setTimeout(fetchTasks, 1500); };
