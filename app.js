@@ -1,20 +1,22 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj84CdrK-CH5u_6_KIAj6iPuTkUWRfIRuoDUow8HT-QQ6hgxc/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj84CdrK-CH5u_6_KIAj6iPuTkUWRfIRuoDUow8HT-QQ6hgxc/exec"; 
+
 let mode = 'AGENT';
 let recognition;
 let isListening = false;
 
-// Funkcja odpowiedzi głosowej Konopka
+// Głos Konopka - ustawiony na bardziej naturalny ton
 function speak(text) {
   if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'pl-PL';
-    u.pitch = 1.1;
+    u.pitch = 0.9; 
     u.rate = 1.0;
     window.speechSynthesis.speak(u);
   }
 }
 
-// Konfiguracja mikrofonu
+// Naprawiony mikrofon - tekst pojawia się w polu tekstowym
 if ('webkitSpeechRecognition' in window || 'speechRecognition' in window) {
   const Speech = window.webkitSpeechRecognition || window.speechRecognition;
   recognition = new Speech();
@@ -23,11 +25,16 @@ if ('webkitSpeechRecognition' in window || 'speechRecognition' in window) {
   recognition.interimResults = true;
 
   recognition.onresult = (e) => {
-    let t = '';
+    let finalTranscript = '';
     for (let i = e.resultIndex; i < e.results.length; ++i) {
-      if (e.results[i].isFinal) t += e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
     }
-    if (t) document.getElementById('cmd').value += t + " ";
+    if (finalTranscript) {
+      // Dodaje tekst do okna i automatycznie przewija
+      const area = document.getElementById('cmd');
+      area.value += finalTranscript + " ";
+      area.scrollTop = area.scrollHeight;
+    }
   };
 }
 
@@ -39,35 +46,38 @@ async function handleMic() {
       isListening = true;
       document.getElementById('micBtn').classList.add('active');
       document.getElementById('status').innerText = "SŁUCHAM...";
-    } catch(e) { 
-      alert("Błąd mikrofonu. Sprawdź uprawnienia w przeglądarce."); 
-    }
+    } catch(e) { alert("Daj dostęp do mikrofonu w przeglądarce!"); }
   } else {
     recognition.stop();
     isListening = false;
     document.getElementById('micBtn').classList.remove('active');
-    document.getElementById('status').innerText = "KONOPEK OS v7 // GOTOWY";
+    document.getElementById('status').innerText = "KONOPEK GOTOWY";
   }
 }
 
-// Wysyłanie do Google Sheets (Mostek)
 function send() {
   const val = document.getElementById('cmd').value;
-  if (!val) return;
+  const deadline = document.getElementById('deadlineInput') ? document.getElementById('deadlineInput').value : "";
   
-  document.getElementById('status').innerText = "WYSYŁANIE DO BAZY...";
+  if (!val) return;
+  document.getElementById('status').innerText = "WYSYŁANIE...";
 
   fetch(SCRIPT_URL, {
     method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify({ polecenie: val, tryb: mode })
+    mode: "no-cors", // Ważne dla Google Apps Script
+    body: JSON.stringify({ 
+      polecenie: val, 
+      tryb: mode,
+      deadline: deadline 
+    })
   }).then(() => {
-    speak("Zlecenie przyjęte, Szefie. Sekcja " + (mode === 'AGENT' ? 'Zespół' : mode));
+    speak("Przyjęte. Zapisałem w sekcji " + (mode === 'JA' ? 'Szef' : mode));
     document.getElementById('cmd').value = "";
-    document.getElementById('status').innerText = "ZAPISANO POMYŚLNIE";
-    setTimeout(() => { document.getElementById('status').innerText = "KONOPEK OS v7 // GOTOWY"; }, 2000);
+    if(document.getElementById('deadlineInput')) document.getElementById('deadlineInput').value = "";
+    document.getElementById('status').innerText = "ZAPISANO POPRAWNIE";
+    setTimeout(() => { document.getElementById('status').innerText = "Konopek OS v7"; }, 2500);
   }).catch(err => {
-    alert("Błąd połączenia: " + err);
+    alert("Błąd: " + err);
   });
 }
 
@@ -75,12 +85,9 @@ function setMode(m) {
   mode = m;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('t-' + m).classList.add('active');
-  speak("Tryb " + (m === 'POMYSL' ? 'Pomysł' : m));
-}
-
-// Rejestracja Service Workera (pod powiadomienia i offline)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(() => {
-    console.log("Service Worker zarejestrowany.");
-  });
+  
+  const dInput = document.getElementById('deadlineInput');
+  if(dInput) dInput.style.display = (m === 'JA') ? 'block' : 'none';
+  
+  speak("Tryb " + (m === 'POMYSL' ? 'Pomysł' : (m === 'JA' ? 'Szef' : 'Zespół')));
 }
