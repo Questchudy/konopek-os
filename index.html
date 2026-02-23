@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Konopek OS v7</title>
+</head>
+<body>
+
+  <div class="header">
+    <img src="https://i0.wp.com/weed4u.pl/wp-content/uploads/2026/02/logo_round.png?resize=300%2C300&ssl=1" class="logo">
+    <div id="status">KONOPEK OS v7 // SYSTEM</div>
+  </div>
+
+  <div class="nav">
+    <div id="t-AGENT" class="nav-btn active" onclick="setMode('AGENT')">ZESPÓŁ</div>
+    <div id="t-JA" class="nav-btn" onclick="setMode('JA')">SZEF</div>
+    <div id="t-POMYSL" class="nav-btn" onclick="setMode('POMYSL')">POMYSŁ</div>
+  </div>
+
+  <div class="main-card">
+    <textarea id="cmd" placeholder="Słucham instrukcji..."></textarea>
+    <div class="controls">
+      <div id="micBtn" class="mic-btn" onclick="handleMic()">🎤</div>
+      <button id="sendBtn" onclick="send()">WYŚLIJ</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
