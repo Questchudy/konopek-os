@@ -1,0 +1,15 @@
+{
+  "name": "Konopek OS v7",
+  "short_name": "Konopek",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#d4af37",
+  "icons": [
+    {
+      "src": "https://i0.wp.com/weed4u.pl/wp-content/uploads/2026/02/logo_round.png?resize=300%2C300&ssl=1",
+      "sizes": "300x300",
+      "type": "image/png"
+    }
+  ]
+}
