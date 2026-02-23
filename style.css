@@ -39,3 +39,13 @@ textarea {
   font-size: 10px; text-transform: uppercase; color: var(--gold); 
   display: block; margin-bottom: 4px; font-weight: bold; 
 }
+/* Status domyślny (złoty) */
+.task-status { color: #d4af37; }
+
+/* Status ukończony (zielony) */
+.task-item[data-status*="UKOŃCZONE"] { border-left-color: #2ecc71; }
+.task-item[data-status*="UKOŃCZONE"] .task-status { color: #2ecc71; }
+
+/* Status w trakcie (niebieski - opcjonalnie) */
+.task-item[data-status*="W TRAKCIE"] { border-left-color: #3498db; }
+.task-item[data-status*="W TRAKCIE"] .task-status { color: #3498db; }
