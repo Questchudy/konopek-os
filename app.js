@@ -4,37 +4,50 @@ let mode = 'AGENT';
 let recognition;
 let isListening = false;
 
-// Głos Konopka - ustawiony na bardziej naturalny ton
+// KONFIGURACJA GŁOSU - MĘSKI I POWAŻNY
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pl-PL';
-    u.pitch = 0.9; 
-    u.rate = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Szukamy najlepszego polskiego głosu
+    let v = voices.find(v => v.lang.includes('PL') && v.name.includes('Male')) || 
+            voices.find(v => v.lang.includes('PL') && v.name.includes('Google')) ||
+            voices.find(v => v.lang.includes('PL'));
+    
+    u.voice = v;
+    u.pitch = 0.75; // Obniżony ton
+    u.rate = 0.9;   // Spokojne tempo
     window.speechSynthesis.speak(u);
   }
 }
 
-// Naprawiony mikrofon - tekst pojawia się w polu tekstowym
+// MIKROFON - POPRAWIONA REAKCJA
 if ('webkitSpeechRecognition' in window || 'speechRecognition' in window) {
-  const Speech = window.webkitSpeechRecognition || window.speechRecognition;
+  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new Speech();
   recognition.lang = 'pl-PL';
+  recognition.interimResults = true; // Pokazuj tekst w trakcie mówienia
   recognition.continuous = true;
-  recognition.interimResults = true;
 
   recognition.onresult = (e) => {
-    let finalTranscript = '';
+    let final = '';
     for (let i = e.resultIndex; i < e.results.length; ++i) {
-      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
     }
-    if (finalTranscript) {
-      // Dodaje tekst do okna i automatycznie przewija
+    if (final) {
+      document.getElementById('cmd').value += final + " ";
+      // Automatyczne przewijanie w dół
       const area = document.getElementById('cmd');
-      area.value += finalTranscript + " ";
       area.scrollTop = area.scrollHeight;
     }
+  };
+
+  recognition.onerror = (err) => {
+    console.error("Błąd rozpoznawania:", err.error);
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('active');
   };
 }
 
@@ -46,7 +59,9 @@ async function handleMic() {
       isListening = true;
       document.getElementById('micBtn').classList.add('active');
       document.getElementById('status').innerText = "SŁUCHAM...";
-    } catch(e) { alert("Daj dostęp do mikrofonu w przeglądarce!"); }
+    } catch(e) {
+      alert("Brak uprawnień do mikrofonu!");
+    }
   } else {
     recognition.stop();
     isListening = false;
@@ -55,29 +70,50 @@ async function handleMic() {
   }
 }
 
+// POBIERANIE ZADAŃ - NAPRAWIONY ODCZYT
+async function fetchTasks() {
+  const list = document.getElementById('taskList');
+  if (!list) return;
+
+  try {
+    // Dodajemy cache-buster, aby Google nie wysyłało starych danych
+    const response = await fetch(`${SCRIPT_URL}?action=getTasks&tryb=${mode}&t=${new Date().getTime()}`);
+    const tasks = await response.json();
+    
+    list.innerHTML = '';
+    if (tasks.length === 0) {
+      list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px; padding:20px;">BRAK AKTYWNYCH ZADAŃ</div>';
+      return;
+    }
+
+    tasks.forEach(t => {
+      list.innerHTML += `<div class="task-item"><span class="task-status">${t.status}</span>${t.polecenie}</div>`;
+    });
+  } catch (e) {
+    console.error("Błąd pobierania zadań:", e);
+    list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px; padding:20px;">OCZEKIWANIE NA DANE...</div>';
+  }
+}
+
 function send() {
   const val = document.getElementById('cmd').value;
-  const deadline = document.getElementById('deadlineInput') ? document.getElementById('deadlineInput').value : "";
-  
+  const deadline = document.getElementById('deadlineInput').value;
   if (!val) return;
+  
   document.getElementById('status').innerText = "WYSYŁANIE...";
-
+  
   fetch(SCRIPT_URL, {
     method: "POST",
-    mode: "no-cors", // Ważne dla Google Apps Script
-    body: JSON.stringify({ 
-      polecenie: val, 
-      tryb: mode,
-      deadline: deadline 
-    })
+    mode: "no-cors",
+    body: JSON.stringify({ polecenie: val, tryb: mode, deadline: deadline })
   }).then(() => {
-    speak("Przyjęte. Zapisałem w sekcji " + (mode === 'JA' ? 'Szef' : mode));
+    speak("Przyjąłem.");
     document.getElementById('cmd').value = "";
-    if(document.getElementById('deadlineInput')) document.getElementById('deadlineInput').value = "";
-    document.getElementById('status').innerText = "ZAPISANO POPRAWNIE";
-    setTimeout(() => { document.getElementById('status').innerText = "Konopek OS v7"; }, 2500);
-  }).catch(err => {
-    alert("Błąd: " + err);
+    document.getElementById('status').innerText = "ZAPISANO";
+    setTimeout(() => { 
+      document.getElementById('status').innerText = "KONOPEK OS v7";
+      fetchTasks(); 
+    }, 1500);
   });
 }
 
@@ -85,9 +121,19 @@ function setMode(m) {
   mode = m;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('t-' + m).classList.add('active');
+  document.getElementById('deadlineInput').style.display = (m === 'JA') ? 'block' : 'none';
   
-  const dInput = document.getElementById('deadlineInput');
-  if(dInput) dInput.style.display = (m === 'JA') ? 'block' : 'none';
-  
-  speak("Tryb " + (m === 'POMYSL' ? 'Pomysł' : (m === 'JA' ? 'Szef' : 'Zespół')));
+  speak("Tryb " + (m === 'AGENT' ? 'Zespół' : (m === 'JA' ? 'Szef' : 'Pomysł')));
+  fetchTasks();
 }
+
+// INICJALIZACJA
+window.onload = () => {
+  // Wymuszenie załadowania głosów
+  window.speechSynthesis.getVoices();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+  
+  setTimeout(fetchTasks, 1000);
+};
