@@ -5,34 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>KONOPEK</title>
 </head>
 <body>
-
   <div class="header">
     <img src="https://i0.wp.com/weed4u.pl/wp-content/uploads/2026/02/logo_round.png?resize=300%2C300&ssl=1" class="logo">
     <div id="status">KONOPEK // SYSTEM</div>
   </div>
-
   <div class="nav">
     <div id="t-AGENT" class="nav-btn active" onclick="setMode('AGENT')">ZESPÓŁ</div>
     <div id="t-JA" class="nav-btn" onclick="setMode('JA')">SZEF</div>
     <div id="t-POMYSL" class="nav-btn" onclick="setMode('POMYSL')">POMYSŁ</div>
   </div>
-
   <div class="main-card">
     <textarea id="cmd" placeholder="Słucham..."></textarea>
-    <input type="datetime-local" id="deadlineInput" style="display:none; width:100%; margin-bottom:15px; padding:12px; border-radius:12px; border:1px solid #d4af37; background:#1a1a1a; color:white; font-family:inherit; box-sizing: border-box;">
+    <input type="datetime-local" id="deadlineInput" style="display:none; width:100%; margin-bottom:15px; padding:12px; border-radius:12px; border:1px solid #d4af37; background:#1a1a1a; color:white; box-sizing: border-box;">
     <div class="controls">
       <div id="micBtn" class="mic-btn" onclick="handleMic()">🎤</div>
       <button id="sendBtn" onclick="send()">WYŚLIJ</button>
     </div>
   </div>
-
   <div class="task-list" id="taskList"></div>
-
   <script src="app.js"></script>
 </body>
 </html>
