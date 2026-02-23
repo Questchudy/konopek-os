@@ -7,13 +7,13 @@
   <link rel="stylesheet" href="style.css">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Konopek OS v7</title>
+  <title>KONOPEK</title>
 </head>
 <body>
 
   <div class="header">
     <img src="https://i0.wp.com/weed4u.pl/wp-content/uploads/2026/02/logo_round.png?resize=300%2C300&ssl=1" class="logo">
-    <div id="status">KONOPEK OS v7 // SYSTEM</div>
+    <div id="status">KONOPEK // SYSTEM</div>
   </div>
 
   <div class="nav">
@@ -23,20 +23,15 @@
   </div>
 
   <div class="main-card">
-    <textarea id="cmd" placeholder="Słucham instrukcji..."></textarea>
-    
-    <input type="datetime-local" id="deadlineInput" 
-           style="display:none; width:100%; margin-bottom:15px; padding:12px; border-radius:12px; border:1px solid #d4af37; background:#1a1a1a; color:white; font-family:inherit; box-sizing: border-box;">
-
+    <textarea id="cmd" placeholder="Słucham..."></textarea>
+    <input type="datetime-local" id="deadlineInput" style="display:none; width:100%; margin-bottom:15px; padding:12px; border-radius:12px; border:1px solid #d4af37; background:#1a1a1a; color:white; font-family:inherit; box-sizing: border-box;">
     <div class="controls">
       <div id="micBtn" class="mic-btn" onclick="handleMic()">🎤</div>
       <button id="sendBtn" onclick="send()">WYŚLIJ</button>
     </div>
   </div>
 
-  <div class="task-list" id="taskList">
-    <div id="status" style="font-size: 10px; opacity: 0.5; text-align: center;">ŁADOWANIE LISTY...</div>
-  </div>
+  <div class="task-list" id="taskList"></div>
 
   <script src="app.js"></script>
 </body>
