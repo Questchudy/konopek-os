@@ -30,3 +30,12 @@ textarea {
 .mic-btn.active { background: #ff4444; border-color: #fff; box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1s infinite; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 #sendBtn { background: var(--gold); color: #000; border: none; padding: 18px 35px; border-radius: 18px; font-weight: bold; font-size: 15px; }
+.task-list { width: 100%; max-width: 400px; margin-top: 20px; }
+.task-item { 
+  background: #161616; border-left: 3px solid var(--gold); padding: 12px; 
+  margin-bottom: 8px; border-radius: 0 12px 12px 0; font-size: 13px;
+}
+.task-status { 
+  font-size: 10px; text-transform: uppercase; color: var(--gold); 
+  display: block; margin-bottom: 4px; font-weight: bold; 
+}
