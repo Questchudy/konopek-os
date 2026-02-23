@@ -24,6 +24,10 @@
 
   <div class="main-card">
     <textarea id="cmd" placeholder="Słucham instrukcji..."></textarea>
+    
+    <input type="datetime-local" id="deadlineInput" 
+           style="display:none; width:100%; margin-bottom:15px; padding:12px; border-radius:12px; border:1px solid #d4af37; background:#1a1a1a; color:white; font-family:inherit; box-sizing: border-box;">
+
     <div class="controls">
       <div id="micBtn" class="mic-btn" onclick="handleMic()">🎤</div>
       <button id="sendBtn" onclick="send()">WYŚLIJ</button>
