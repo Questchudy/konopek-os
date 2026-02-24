@@ -1,7 +1,7 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj84CdrK-CH5u_6_KIAj6iPuTkUWRfIRuoDUow8HT-QQ6hgxc/exec"; 
 
 let mode = 'AGENT';
-let recognition;
+let recognition = null;
 let isListening = false;
 
 function speak(text) {
@@ -15,46 +15,65 @@ function speak(text) {
   }
 }
 
-// KONFIGURACJA MIKROFONU
-const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (Speech) {
-  recognition = new Speech();
-  recognition.lang = 'pl-PL';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onresult = (event) => {
-    const area = document.getElementById('cmd');
-    let finalTranscript = '';
-
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      }
-    }
-
-    if (finalTranscript) {
-      // Wstawianie tekstu w sposób nieblokujący kursora
-      const start = area.selectionStart;
-      const end = area.selectionEnd;
-      const currentVal = area.value;
-      area.value = currentVal.substring(0, start) + finalTranscript.trim() + " " + currentVal.substring(end);
-      area.dispatchEvent(new Event('input')); // Powiadomienie systemu o zmianie
-    }
-  };
-
-  recognition.onstart = () => { document.getElementById('status').innerText = "SŁUCHAM..."; };
-  recognition.onend = () => { if (isListening) try { recognition.start(); } catch(e) {} };
-}
-
+// FUNKCJA STARTUJĄCA MIKROFON - STWORZONA POD ANDROIDA
 async function handleMic() {
+  const btn = document.getElementById('micBtn');
+  const area = document.getElementById('cmd');
+
   if (!isListening) {
     try {
+      // 1. Prośba o dostęp do sprzętu (wymuszenie na systemie)
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      isListening = true;
+
+      // 2. Inicjalizacja silnika Web Speech
+      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Speech) {
+        alert("Twoja przeglądarka nie wspiera mowy.");
+        return;
+      }
+
+      recognition = new Speech();
+      recognition.lang = 'pl-PL';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        isListening = true;
+        btn.classList.add('active');
+        document.getElementById('status').innerText = "SŁUCHAM...";
+        if (navigator.vibrate) navigator.vibrate(50); // Krótka wibracja na start
+      };
+
+      recognition.onresult = (event) => {
+        let final = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            final += event.results[i][0].transcript;
+          }
+        }
+        if (final) {
+          area.value += final.trim() + " ";
+          area.scrollTop = area.scrollHeight;
+          // Wymuszamy na Androidzie odświeżenie pola
+          area.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Błąd mowy:", e.error);
+        stopMic();
+      };
+
+      recognition.onend = () => {
+        if (isListening) recognition.start(); // Auto-restart przy ciszy
+      };
+
       recognition.start();
-      document.getElementById('micBtn').classList.add('active');
-    } catch(e) { alert("Sprawdź uprawnienia mikrofonu!"); }
+
+    } catch (err) {
+      alert("Błąd: System odrzucił dostęp do mikrofonu.");
+      console.error(err);
+    }
   } else {
     stopMic();
   }
@@ -62,11 +81,15 @@ async function handleMic() {
 
 function stopMic() {
   isListening = false;
-  if (recognition) recognition.stop();
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
   document.getElementById('micBtn').classList.remove('active');
   document.getElementById('status').innerText = "KONOPEK";
 }
 
+// POBIERANIE LISTY ZADAŃ
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
@@ -74,10 +97,16 @@ async function fetchTasks() {
     const tasks = await res.json();
     list.innerHTML = '';
     tasks.forEach(t => {
-      const statusText = t.status ? t.status.toUpperCase() : "OCZEKUJE";
-      list.innerHTML += `<div class="task-item" data-status="${statusText}"><span class="task-status">${statusText}</span>${t.polecenie}</div>`;
+      const statusText = (t.status || "OCZEKUJE").toUpperCase();
+      list.innerHTML += `
+        <div class="task-item" data-status="${statusText}">
+          <span class="task-status">${statusText}</span>
+          ${t.polecenie}
+        </div>`;
     });
-  } catch (e) { list.innerHTML = ''; }
+  } catch (e) {
+    list.innerHTML = '<div style="text-align:center; opacity:0.2;">...</div>';
+  }
 }
 
 function send() {
@@ -95,7 +124,10 @@ function send() {
     speak("Przyjęłam.");
     area.value = "";
     document.getElementById('status').innerText = "ZAPISANO";
-    setTimeout(() => { document.getElementById('status').innerText = "KONOPEK"; fetchTasks(); }, 1000);
+    setTimeout(() => { 
+      document.getElementById('status').innerText = "KONOPEK"; 
+      fetchTasks(); 
+    }, 1000);
   });
 }
 
@@ -108,4 +140,6 @@ function setMode(m) {
   fetchTasks();
 }
 
-window.onload = () => { setTimeout(fetchTasks, 1000); };
+window.onload = () => { 
+  setTimeout(fetchTasks, 1000); 
+};
