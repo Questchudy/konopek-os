@@ -15,74 +15,84 @@ function speak(text) {
   }
 }
 
-// INICJALIZACJA MIKROFONU - WERSJA MOBILE-FIRST
-const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (Speech) {
-  recognition = new Speech();
-  recognition.lang = 'pl-PL';
-  recognition.continuous = true;
-  recognition.interimResults = true; // KLUCZOWE: Widzimy tekst od razu
+// CAŁKOWICIE NOWA KONFIGURACJA POD MOBILE
+function initRecognition() {
+  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Speech) return null;
 
-  recognition.onresult = (event) => {
-    let interimTranscript = '';
-    let finalTranscript = '';
+  const rec = new Speech();
+  rec.lang = 'pl-PL';
+  rec.continuous = true;
+  rec.interimResults = true; // Musi być true na Androidzie, by "popychać" wyniki
 
+  rec.onresult = (event) => {
+    let currentText = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      } else {
-        interimTranscript += event.results[i][0].transcript;
+        // Dodajemy tylko sfinalizowane fragmenty
+        document.getElementById('cmd').value += event.results[i][0].transcript + " ";
       }
     }
-
-    const area = document.getElementById('cmd');
-    if (finalTranscript) {
-      area.value += finalTranscript.trim() + " ";
-      area.scrollTop = area.scrollHeight;
-    }
-    // Na mobile interimTranscript pomaga "popychać" procesor mowy
-    console.log("Słyszę:", interimTranscript);
   };
 
-  recognition.onerror = (err) => {
-    console.error("Błąd:", err.error);
-    if (err.error === 'network') alert("Brak internetu do obsługi mowy!");
-    if (err.error === 'not-allowed') alert("Zezwól na mikrofon w ustawieniach telefonu!");
+  rec.onstart = () => {
+    document.getElementById('status').innerText = "SŁUCHAM...";
+    console.log("Mikrofon aktywny");
   };
 
-  recognition.onend = () => {
+  rec.onerror = (err) => {
+    console.error("Błąd mowy:", err.error);
+    if (err.error === 'no-speech') return; // Ignoruj ciszę
+    stopMic();
+  };
+
+  rec.onend = () => {
     if (isListening) {
-      try { recognition.start(); } catch(e) {}
+      try { rec.start(); } catch(e) {}
     }
   };
-}
 
-function stopMic() {
-  isListening = false;
-  if (recognition) recognition.stop();
-  document.getElementById('micBtn').classList.remove('active');
-  document.getElementById('status').innerText = "KONOPEK";
+  return rec;
 }
 
 async function handleMic() {
+  const area = document.getElementById('cmd');
+  const btn = document.getElementById('micBtn');
+
   if (!isListening) {
+    // 1. Inicjalizacja obiektu DOPIERO po kliknięciu
+    if (!recognition) recognition = initRecognition();
+    
     try {
-      // WAŻNE DLA MOBILE: Najpierw prosimy o dostęp, potem odpalamy silnik
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 2. Wymuszamy aktywację kontekstu audio (wymóg mobilny)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       isListening = true;
+      btn.classList.add('active');
       recognition.start();
-      document.getElementById('micBtn').classList.add('active');
-      document.getElementById('status').innerText = "SŁUCHAM...";
+      
+      // Krótka wibracja (jeśli telefon wspiera) potwierdzająca start
+      if (navigator.vibrate) navigator.vibrate(50);
+      
     } catch(e) {
-      alert("Błąd dostępu do mikrofonu!");
-      isListening = false;
+      alert("System zablokował dostęp do mikrofonu.");
+      console.error(e);
     }
   } else {
     stopMic();
   }
 }
 
+function stopMic() {
+  isListening = false;
+  if (recognition) {
+    recognition.stop();
+  }
+  document.getElementById('micBtn').classList.remove('active');
+  document.getElementById('status').innerText = "KONOPEK";
+}
+
+// POBIERANIE LISTY
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   if (!list) return;
