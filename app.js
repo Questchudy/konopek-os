@@ -21,18 +21,17 @@ if (Speech) {
   recognition = new Speech();
   recognition.lang = 'pl-PL';
   recognition.continuous = true;
-  recognition.interimResults = true;
+  recognition.interimResults = false; // Zmieniamy na false, by nie "spamować" pola tekstowego
 
   recognition.onresult = (event) => {
     const area = document.getElementById('cmd');
-    // POBIERANIE TEKSTU METODĄ BEZPOŚREDNIĄ (MOBILE-FRIENDLY)
-    const result = event.results[event.results.length - 1];
+    const transcript = event.results[event.results.length - 1][0].transcript;
     
-    if (result.isFinal) {
-      const transcript = result[0].transcript;
-      area.value += transcript.trim() + " ";
+    if (event.results[event.results.length - 1].isFinal) {
+      // Metoda "Append" - najbezpieczniejsza dla Androida
+      const stareValue = area.value;
+      area.value = stareValue + transcript.trim() + " ";
       area.scrollTop = area.scrollHeight;
-      console.log("Finalny tekst:", transcript);
     }
   };
 
@@ -41,29 +40,27 @@ if (Speech) {
     document.getElementById('micBtn').classList.add('active');
   };
 
-  recognition.onerror = (err) => {
-    console.error("Błąd rozpoznawania:", err.error);
-    // Jeśli błąd to 'network', Android często wymaga odświeżenia strony
-    if (err.error === 'network') alert("Problem z siecią - mikrofon Google wymaga internetu!");
-    stopMic();
-  };
-
   recognition.onend = () => {
     if (isListening) {
       try { recognition.start(); } catch(e) {}
     }
+  };
+
+  recognition.onerror = (err) => {
+    console.error("Błąd:", err.error);
+    if (err.error !== 'no-speech') stopMic();
   };
 }
 
 async function handleMic() {
   if (!isListening) {
     try {
-      // Wymuszamy strumień audio przed startem recognition
+      // Wymuszamy dostęp do mikrofonu
       await navigator.mediaDevices.getUserMedia({ audio: true });
       isListening = true;
       recognition.start();
     } catch(e) {
-      alert("Brak uprawnień do mikrofonu!");
+      alert("Błąd dostępu do mikrofonu!");
     }
   } else {
     stopMic();
@@ -77,7 +74,6 @@ function stopMic() {
   document.getElementById('status').innerText = "KONOPEK";
 }
 
-// POBIERANIE LISTY ZADAŃ
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
@@ -86,15 +82,9 @@ async function fetchTasks() {
     list.innerHTML = '';
     tasks.forEach(t => {
       const statusText = (t.status || "OCZEKUJE").toUpperCase();
-      list.innerHTML += `
-        <div class="task-item" data-status="${statusText}">
-          <span class="task-status">${statusText}</span>
-          ${t.polecenie}
-        </div>`;
+      list.innerHTML += `<div class="task-item" data-status="${statusText}"><span class="task-status">${statusText}</span>${t.polecenie}</div>`;
     });
-  } catch (e) {
-    if (list) list.innerHTML = '';
-  }
+  } catch (e) { if(list) list.innerHTML = ''; }
 }
 
 function send() {
@@ -112,10 +102,7 @@ function send() {
     speak("Przyjęłam.");
     area.value = "";
     document.getElementById('status').innerText = "ZAPISANO";
-    setTimeout(() => { 
-      document.getElementById('status').innerText = "KONOPEK"; 
-      fetchTasks(); 
-    }, 1000);
+    setTimeout(() => { document.getElementById('status').innerText = "KONOPEK"; fetchTasks(); }, 1000);
   });
 }
 
@@ -128,6 +115,4 @@ function setMode(m) {
   fetchTasks();
 }
 
-window.onload = () => { 
-  setTimeout(fetchTasks, 1000); 
-};
+window.onload = () => { setTimeout(fetchTasks, 1000); };
