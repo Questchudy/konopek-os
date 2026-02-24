@@ -16,45 +16,48 @@ function speak(text) {
   }
 }
 
-// NAPRAWIONY MIKROFON - SPECJALNIE POD TELEFONY
-if ('webkitSpeechRecognition' in window || 'speechRecognition' in window) {
-  const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+// OSTATECZNIE POPRAWIONY MIKROFON
+const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (Speech) {
   recognition = new Speech();
   recognition.lang = 'pl-PL';
   recognition.continuous = true;
-  recognition.interimResults = true;
+  recognition.interimResults = true; // Zostawiamy true, ale zmieniamy sposób zapisu
 
   recognition.onresult = (event) => {
-    let interimTranscript = '';
     let finalTranscript = '';
-
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
         finalTranscript += event.results[i][0].transcript;
-      } else {
-        interimTranscript += event.results[i][0].transcript;
       }
     }
-
+    
+    // Kluczowa poprawka: dopisujemy tylko sfinalizowany tekst do pola tekstowego
     if (finalTranscript) {
-      document.getElementById('cmd').value += finalTranscript + " ";
+      const area = document.getElementById('cmd');
+      area.value += finalTranscript.trim() + " ";
+      area.scrollTop = area.scrollHeight; // Auto-scroll
     }
   };
 
   recognition.onerror = (event) => {
-    console.error("Błąd mikrofonu:", event.error);
-    if (event.error === 'not-allowed') alert("Musisz zezwolić na mikrofon w ustawieniach strony!");
+    console.error("Błąd rozpoznawania:", event.error);
+    if (event.error === 'not-allowed') alert("Zezwól na mikrofon w ustawieniach przeglądarki!");
     stopMic();
   };
 
   recognition.onend = () => {
-    if (isListening) recognition.start(); // Automatyczny restart jeśli przerwie
+    // Jeśli isListening nadal jest true, a system przerwał (cisza), restartujemy
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
   };
 }
 
 function stopMic() {
-  recognition.stop();
   isListening = false;
+  if (recognition) recognition.stop();
   document.getElementById('micBtn').classList.remove('active');
   document.getElementById('status').innerText = "KONOPEK";
 }
@@ -62,13 +65,15 @@ function stopMic() {
 async function handleMic() {
   if (!isListening) {
     try {
+      // Wymuszamy zapytanie o uprawnienia
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      recognition.start();
       isListening = true;
+      recognition.start();
       document.getElementById('micBtn').classList.add('active');
       document.getElementById('status').innerText = "SŁUCHAM CIĘ...";
-    } catch(e) { 
-      alert("Brak dostępu do mikrofonu!"); 
+    } catch(e) {
+      alert("Brak dostępu do mikrofonu!");
+      isListening = false;
     }
   } else {
     stopMic();
@@ -85,7 +90,6 @@ async function fetchTasks() {
     
     tasks.forEach(t => {
       const statusText = t.status ? t.status.toUpperCase() : "OCZEKUJE";
-      // Tworzymy element z atrybutem data-status dla CSS
       const taskHtml = `
         <div class="task-item" data-status="${statusText}">
           <span class="task-status">${statusText}</span>
@@ -94,7 +98,8 @@ async function fetchTasks() {
       list.innerHTML += taskHtml;
     });
   } catch (e) {
-    list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px;">POBIERAM DANE...</div>';
+    console.error("Błąd pobierania:", e);
+    list.innerHTML = '<div style="text-align:center; opacity:0.3; font-size:10px;">ŁĄCZENIE Z ARKUSZEM...</div>';
   }
 }
 
