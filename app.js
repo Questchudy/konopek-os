@@ -4,7 +4,6 @@ let mode = 'AGENT';
 let recognition;
 let isListening = false;
 
-// ŻEŃSKA FORMA WYPOWIEDZI
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -16,7 +15,7 @@ function speak(text) {
   }
 }
 
-// INICJALIZACJA MIKROFONU - PROSTA I STABILNA
+// INICJALIZACJA MIKROFONU
 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Speech) {
   recognition = new Speech();
@@ -26,18 +25,14 @@ if (Speech) {
 
   recognition.onresult = (event) => {
     const area = document.getElementById('cmd');
-    let finalTranscript = '';
-
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      }
-    }
-
-    if (finalTranscript) {
-      // DOPISYWANIE TEKSTU - NAJPROSTSZA METODA
-      area.value += finalTranscript.trim() + " ";
+    // POBIERANIE TEKSTU METODĄ BEZPOŚREDNIĄ (MOBILE-FRIENDLY)
+    const result = event.results[event.results.length - 1];
+    
+    if (result.isFinal) {
+      const transcript = result[0].transcript;
+      area.value += transcript.trim() + " ";
       area.scrollTop = area.scrollHeight;
+      console.log("Finalny tekst:", transcript);
     }
   };
 
@@ -46,24 +41,24 @@ if (Speech) {
     document.getElementById('micBtn').classList.add('active');
   };
 
+  recognition.onerror = (err) => {
+    console.error("Błąd rozpoznawania:", err.error);
+    // Jeśli błąd to 'network', Android często wymaga odświeżenia strony
+    if (err.error === 'network') alert("Problem z siecią - mikrofon Google wymaga internetu!");
+    stopMic();
+  };
+
   recognition.onend = () => {
-    // Jeśli isListening jest true, to znaczy, że system sam przerwał (np. chwila ciszy)
-    // Wtedy restartujemy, dopóki użytkownik nie kliknie STOP
     if (isListening) {
       try { recognition.start(); } catch(e) {}
     }
-  };
-
-  recognition.onerror = (err) => {
-    console.error("Błąd mikrofonu:", err.error);
-    if (err.error !== 'no-speech') stopMic();
   };
 }
 
 async function handleMic() {
   if (!isListening) {
     try {
-      // Prośba o dostęp
+      // Wymuszamy strumień audio przed startem recognition
       await navigator.mediaDevices.getUserMedia({ audio: true });
       isListening = true;
       recognition.start();
@@ -98,7 +93,7 @@ async function fetchTasks() {
         </div>`;
     });
   } catch (e) {
-    list.innerHTML = '';
+    if (list) list.innerHTML = '';
   }
 }
 
