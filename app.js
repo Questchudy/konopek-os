@@ -15,7 +15,7 @@ function speak(text) {
   }
 }
 
-// INICJALIZACJA MIKROFONU
+// KONFIGURACJA MIKROFONU
 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Speech) {
   recognition = new Speech();
@@ -34,15 +34,17 @@ if (Speech) {
     }
 
     if (finalTranscript) {
-      // Używamy insertText lub prostego dodawania, aby nie blokować kursora
-      area.value += finalTranscript.trim() + " ";
-      area.scrollTop = area.scrollHeight;
+      // Wstawianie tekstu w sposób nieblokujący kursora
+      const start = area.selectionStart;
+      const end = area.selectionEnd;
+      const currentVal = area.value;
+      area.value = currentVal.substring(0, start) + finalTranscript.trim() + " " + currentVal.substring(end);
+      area.dispatchEvent(new Event('input')); // Powiadomienie systemu o zmianie
     }
   };
 
   recognition.onstart = () => { document.getElementById('status').innerText = "SŁUCHAM..."; };
-  recognition.onerror = (err) => { console.error("Błąd:", err.error); stopMic(); };
-  recognition.onend = () => { if (isListening) recognition.start(); };
+  recognition.onend = () => { if (isListening) try { recognition.start(); } catch(e) {} };
 }
 
 async function handleMic() {
@@ -52,7 +54,7 @@ async function handleMic() {
       isListening = true;
       recognition.start();
       document.getElementById('micBtn').classList.add('active');
-    } catch(e) { alert("Brak dostępu do mikrofonu!"); }
+    } catch(e) { alert("Sprawdź uprawnienia mikrofonu!"); }
   } else {
     stopMic();
   }
@@ -65,7 +67,6 @@ function stopMic() {
   document.getElementById('status').innerText = "KONOPEK";
 }
 
-// POBIERANIE LISTY
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
@@ -76,11 +77,12 @@ async function fetchTasks() {
       const statusText = t.status ? t.status.toUpperCase() : "OCZEKUJE";
       list.innerHTML += `<div class="task-item" data-status="${statusText}"><span class="task-status">${statusText}</span>${t.polecenie}</div>`;
     });
-  } catch (e) { list.innerHTML = '...'; }
+  } catch (e) { list.innerHTML = ''; }
 }
 
 function send() {
-  const val = document.getElementById('cmd').value;
+  const area = document.getElementById('cmd');
+  const val = area.value;
   const deadline = document.getElementById('deadlineInput').value;
   if (!val) return;
   
@@ -91,7 +93,7 @@ function send() {
     body: JSON.stringify({ polecenie: val, tryb: mode, deadline: deadline })
   }).then(() => {
     speak("Przyjęłam.");
-    document.getElementById('cmd').value = "";
+    area.value = "";
     document.getElementById('status').innerText = "ZAPISANO";
     setTimeout(() => { document.getElementById('status').innerText = "KONOPEK"; fetchTasks(); }, 1000);
   });
