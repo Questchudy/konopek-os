@@ -1,51 +1,172 @@
-:root { --gold: #d4af37; --bg: #0d0d0d; --card: #161616; --text: #e0e0e0; }
+:root { 
+    --gold: #d4af37; 
+    --bg: #0d0d0d; 
+    --card: #161616; 
+    --text: #e0e0e0; 
+}
+
 body { 
-  margin: 0; padding: 20px; background: var(--bg); color: var(--text); 
-  font-family: sans-serif; display: flex; flex-direction: column; align-items: center; 
+    margin: 0; 
+    padding: 20px; 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: sans-serif; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
 }
+
 .header { text-align: center; margin-bottom: 25px; }
-.logo { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
-#status { color: var(--gold); font-size: 11px; letter-spacing: 3px; margin: 15px 0; font-weight: bold; text-transform: uppercase; }
 
+.logo { 
+    width: 90px; 
+    height: 90px; 
+    border-radius: 50%; 
+    border: 2px solid var(--gold); 
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); 
+}
+
+#status { 
+    color: var(--gold); 
+    font-size: 11px; 
+    letter-spacing: 3px; 
+    margin: 15px 0; 
+    font-weight: bold; 
+    text-transform: uppercase; 
+}
+
+/* NAWIGACJA */
 .nav { display: flex; width: 100%; max-width: 400px; gap: 10px; margin-bottom: 25px; }
+
 .nav-btn { 
-  flex: 1; padding: 15px; background: var(--card); border: 1px solid #333; 
-  border-radius: 15px; color: #777; font-size: 11px; text-align: center; cursor: pointer; transition: 0.3s;
+    flex: 1; 
+    padding: 15px; 
+    background: var(--card); 
+    border: 1px solid #333; 
+    border-radius: 15px; 
+    color: #777; 
+    font-size: 11px; 
+    text-align: center; 
+    cursor: pointer; 
+    transition: 0.3s;
 }
-.nav-btn.active { color: var(--gold); border-color: var(--gold); background: rgba(212, 175, 55, 0.1); }
 
+.nav-btn.active { 
+    color: var(--gold); 
+    border-color: var(--gold); 
+    background: rgba(212, 175, 55, 0.1); 
+}
+
+/* KARTA GŁÓWNA */
 .main-card { 
-  width: 100%; max-width: 400px; background: var(--card); border-radius: 30px; 
-  padding: 25px; border: 1px solid #333; box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+    width: 100%; 
+    max-width: 400px; 
+    background: var(--card); 
+    border-radius: 30px; 
+    padding: 25px; 
+    border: 1px solid #333; 
+    box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+    box-sizing: border-box;
 }
+
+/* POLE TEKSTOWE - NAPRAWIONE POD MOBILE */
 textarea { 
-  width: 100%; height: 130px; background: transparent; border: none; 
-  color: #fff; font-size: 19px; outline: none; resize: none; line-height: 1.5;
+    width: 100%; 
+    height: 130px; 
+    background: #1a1a1a !important; 
+    border: 1px solid #222 !important; 
+    border-radius: 12px;
+    color: #fff; 
+    font-size: 18px; 
+    outline: none; 
+    resize: none; 
+    line-height: 1.5;
+    padding: 12px;
+    box-sizing: border-box;
+    display: block;
+    -webkit-user-select: text;
+    user-select: text;
+    margin-bottom: 10px;
 }
+
+/* KONTROLKI */
 .controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+
 .mic-btn { 
-  width: 65px; height: 65px; background: #222; border-radius: 50%; 
-  display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid #444; 
+    width: 65px; 
+    height: 65px; 
+    background: #222; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 28px; 
+    border: 1px solid #444; 
+    cursor: pointer;
 }
-.mic-btn.active { background: #ff4444; border-color: #fff; box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); animation: pulse 1s infinite; }
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-#sendBtn { background: var(--gold); color: #000; border: none; padding: 18px 35px; border-radius: 18px; font-weight: bold; font-size: 15px; }
+
+.mic-btn.active { 
+    background: #ff4444; 
+    border-color: #fff; 
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); 
+    animation: pulse 1s infinite; 
+}
+
+@keyframes pulse { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+    100% { transform: scale(1); } 
+}
+
+#sendBtn { 
+    background: var(--gold); 
+    color: #000; 
+    border: none; 
+    padding: 18px 35px; 
+    border-radius: 18px; 
+    font-weight: bold; 
+    font-size: 15px; 
+    cursor: pointer;
+}
+
+/* LISTA ZADAŃ I STATUSY */
 .task-list { width: 100%; max-width: 400px; margin-top: 20px; }
+
 .task-item { 
-  background: #161616; border-left: 3px solid var(--gold); padding: 12px; 
-  margin-bottom: 8px; border-radius: 0 12px 12px 0; font-size: 13px;
+    background: #161616; 
+    border-left: 4px solid var(--gold); 
+    padding: 15px; 
+    margin-bottom: 10px; 
+    border-radius: 0 15px 15px 0; 
+    font-size: 14px;
+    transition: 0.3s;
 }
+
 .task-status { 
-  font-size: 10px; text-transform: uppercase; color: var(--gold); 
-  display: block; margin-bottom: 4px; font-weight: bold; 
+    font-size: 10px; 
+    text-transform: uppercase; 
+    color: var(--gold); 
+    display: block; 
+    margin-bottom: 5px; 
+    font-weight: bold; 
 }
-/* Status domyślny (złoty) */
-.task-status { color: #d4af37; }
 
-/* Status ukończony (zielony) */
-.task-item[data-status*="UKOŃCZONE"] { border-left-color: #2ecc71; }
-.task-item[data-status*="UKOŃCZONE"] .task-status { color: #2ecc71; }
+/* KOLORY STATUSÓW Z ARKUSZA */
+.task-item[data-status*="UKOŃCZONE"] { border-left-color: #2ecc71 !important; }
+.task-item[data-status*="UKOŃCZONE"] .task-status { color: #2ecc71 !important; }
 
-/* Status w trakcie (niebieski - opcjonalnie) */
-.task-item[data-status*="W TRAKCIE"] { border-left-color: #3498db; }
-.task-item[data-status*="W TRAKCIE"] .task-status { color: #3498db; }
+.task-item[data-status*="W TRAKCIE"] { border-left-color: #3498db !important; }
+.task-item[data-status*="W TRAKCIE"] .task-status { color: #3498db !important; }
+
+/* INPUT DLA DEADLINE */
+#deadlineInput {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: white;
+    box-sizing: border-box;
+    font-family: inherit;
+}
