@@ -3,6 +3,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj
 let mode = 'AGENT';
 let recognition;
 let isListening = false;
+let audioContext; // Dodatkowe wymuszenie dla Androida
 
 function speak(text) {
   if ('speechSynthesis' in window) {
@@ -15,33 +16,28 @@ function speak(text) {
   }
 }
 
-// INICJALIZACJA MIKROFONU
+// GŁÓWNA KONFIGURACJA MIKROFONU
 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Speech) {
   recognition = new Speech();
   recognition.lang = 'pl-PL';
-  
-  // KLUCZOWA ZMIANA POD ANDROIDA:
-  recognition.continuous = false; 
+  recognition.continuous = true;
   recognition.interimResults = true;
 
   recognition.onresult = (event) => {
     const area = document.getElementById('cmd');
-    let interimTranscript = '';
     let finalTranscript = '';
 
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       if (event.results[i].isFinal) {
         finalTranscript += event.results[i][0].transcript;
-      } else {
-        interimTranscript += event.results[i][0].transcript;
       }
     }
 
     if (finalTranscript) {
       area.value += finalTranscript.trim() + " ";
       area.scrollTop = area.scrollHeight;
-      if (navigator.vibrate) navigator.vibrate(20); // Delikatny "klik" przy tekście
+      console.log("Rozpoznano:", finalTranscript);
     }
   };
 
@@ -51,27 +47,41 @@ if (Speech) {
   };
 
   recognition.onerror = (err) => {
-    console.error("Błąd:", err.error);
-    if (err.error !== 'no-speech') stopMic();
+    console.error("Błąd API:", err.error);
+    if (err.error === 'no-speech') return; 
+    stopMic();
   };
 
   recognition.onend = () => {
-    // Na Androidzie continuous:false kończy sesję po zdaniu.
-    // Jeśli isListening nadal true, natychmiast odpalamy nową sesję.
     if (isListening) {
       try { recognition.start(); } catch(e) {}
     }
   };
 }
 
+// TA FUNKCJA TO KLUCZ DO ANDROIDA
 async function handleMic() {
   if (!isListening) {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 1. Wymuszamy start kontekstu audio (budzimy kartę dźwiękową)
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
+      // 2. Pobieramy strumień (fizyczne otwarcie mikrofonu)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // 3. Startujemy właściwe rozpoznawanie
       isListening = true;
       recognition.start();
+      
+      if (navigator.vibrate) navigator.vibrate(50);
     } catch(e) {
-      alert("Błąd mikrofonu!");
+      alert("System Android zablokował mikrofon. Sprawdź kłódkę w Chrome.");
+      console.error(e);
     }
   } else {
     stopMic();
@@ -85,17 +95,19 @@ function stopMic() {
   document.getElementById('status').innerText = "KONOPEK";
 }
 
-// RESZTA FUNKCJI (BEZ ZMIAN)
+// POBIERANIE LISTY
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
     const res = await fetch(`${SCRIPT_URL}?action=getTasks&tryb=${mode}&t=${new Date().getTime()}`);
     const tasks = await res.json();
-    list.innerHTML = '';
-    tasks.forEach(t => {
-      const statusText = (t.status || "OCZEKUJE").toUpperCase();
-      list.innerHTML += `<div class="task-item" data-status="${statusText}"><span class="task-status">${statusText}</span>${t.polecenie}</div>`;
-    });
+    if (list) {
+        list.innerHTML = '';
+        tasks.forEach(t => {
+          const statusText = (t.status || "OCZEKUJE").toUpperCase();
+          list.innerHTML += `<div class="task-item" data-status="${statusText}"><span class="task-status">${statusText}</span>${t.polecenie}</div>`;
+        });
+    }
   } catch (e) { if(list) list.innerHTML = ''; }
 }
 
