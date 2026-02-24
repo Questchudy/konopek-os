@@ -20,18 +20,28 @@ const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Speech) {
   recognition = new Speech();
   recognition.lang = 'pl-PL';
-  recognition.continuous = true;
-  recognition.interimResults = false; // Zmieniamy na false, by nie "spamować" pola tekstowego
+  
+  // KLUCZOWA ZMIANA POD ANDROIDA:
+  recognition.continuous = false; 
+  recognition.interimResults = true;
 
   recognition.onresult = (event) => {
     const area = document.getElementById('cmd');
-    const transcript = event.results[event.results.length - 1][0].transcript;
-    
-    if (event.results[event.results.length - 1].isFinal) {
-      // Metoda "Append" - najbezpieczniejsza dla Androida
-      const stareValue = area.value;
-      area.value = stareValue + transcript.trim() + " ";
+    let interimTranscript = '';
+    let finalTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interimTranscript += event.results[i][0].transcript;
+      }
+    }
+
+    if (finalTranscript) {
+      area.value += finalTranscript.trim() + " ";
       area.scrollTop = area.scrollHeight;
+      if (navigator.vibrate) navigator.vibrate(20); // Delikatny "klik" przy tekście
     }
   };
 
@@ -40,27 +50,28 @@ if (Speech) {
     document.getElementById('micBtn').classList.add('active');
   };
 
-  recognition.onend = () => {
-    if (isListening) {
-      try { recognition.start(); } catch(e) {}
-    }
-  };
-
   recognition.onerror = (err) => {
     console.error("Błąd:", err.error);
     if (err.error !== 'no-speech') stopMic();
+  };
+
+  recognition.onend = () => {
+    // Na Androidzie continuous:false kończy sesję po zdaniu.
+    // Jeśli isListening nadal true, natychmiast odpalamy nową sesję.
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
   };
 }
 
 async function handleMic() {
   if (!isListening) {
     try {
-      // Wymuszamy dostęp do mikrofonu
       await navigator.mediaDevices.getUserMedia({ audio: true });
       isListening = true;
       recognition.start();
     } catch(e) {
-      alert("Błąd dostępu do mikrofonu!");
+      alert("Błąd mikrofonu!");
     }
   } else {
     stopMic();
@@ -74,6 +85,7 @@ function stopMic() {
   document.getElementById('status').innerText = "KONOPEK";
 }
 
+// RESZTA FUNKCJI (BEZ ZMIAN)
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
@@ -92,7 +104,6 @@ function send() {
   const val = area.value;
   const deadline = document.getElementById('deadlineInput').value;
   if (!val) return;
-  
   document.getElementById('status').innerText = "WYSYŁAM...";
   fetch(SCRIPT_URL, {
     method: "POST",
