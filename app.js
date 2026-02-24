@@ -3,7 +3,6 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj
 let mode = 'AGENT';
 let recognition;
 let isListening = false;
-let audioContext; // Dodatkowe wymuszenie dla Androida
 
 function speak(text) {
   if ('speechSynthesis' in window) {
@@ -16,28 +15,26 @@ function speak(text) {
   }
 }
 
-// GŁÓWNA KONFIGURACJA MIKROFONU
+// INICJALIZACJA - NOWA TECHNIKA "COMMAND MODE"
 const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Speech) {
   recognition = new Speech();
   recognition.lang = 'pl-PL';
+  
+  // ZMIANA: Wyłączamy interim, co wymusza na Androidzie pełne przetworzenie frazy
   recognition.continuous = true;
-  recognition.interimResults = true;
+  recognition.interimResults = false; 
 
   recognition.onresult = (event) => {
     const area = document.getElementById('cmd');
-    let finalTranscript = '';
-
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      }
-    }
-
-    if (finalTranscript) {
-      area.value += finalTranscript.trim() + " ";
+    // Pobieramy ostatni wynik z listy
+    const lastResultIndex = event.results.length - 1;
+    const transcript = event.results[lastResultIndex][0].transcript;
+    
+    if (event.results[lastResultIndex].isFinal) {
+      area.value += transcript.trim() + " ";
       area.scrollTop = area.scrollHeight;
-      console.log("Rozpoznano:", finalTranscript);
+      if (navigator.vibrate) navigator.vibrate(40); 
     }
   };
 
@@ -48,8 +45,11 @@ if (Speech) {
 
   recognition.onerror = (err) => {
     console.error("Błąd API:", err.error);
-    if (err.error === 'no-speech') return; 
-    stopMic();
+    // Jeśli wywali błąd 'no-speech' na Androidzie, to znaczy że mikrofon nie "słyszy" mowy mimo ciszy
+    if (err.error === 'no-speech' && isListening) {
+        // Cichy restart
+        try { recognition.stop(); } catch(e) {}
+    }
   };
 
   recognition.onend = () => {
@@ -59,29 +59,15 @@ if (Speech) {
   };
 }
 
-// TA FUNKCJA TO KLUCZ DO ANDROIDA
 async function handleMic() {
   if (!isListening) {
     try {
-      // 1. Wymuszamy start kontekstu audio (budzimy kartę dźwiękową)
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
-      // 2. Pobieramy strumień (fizyczne otwarcie mikrofonu)
+      // Wymuszamy aktywność Audio
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // 3. Startujemy właściwe rozpoznawanie
       isListening = true;
       recognition.start();
-      
-      if (navigator.vibrate) navigator.vibrate(50);
     } catch(e) {
-      alert("System Android zablokował mikrofon. Sprawdź kłódkę w Chrome.");
-      console.error(e);
+      alert("Błąd dostępu!");
     }
   } else {
     stopMic();
@@ -95,7 +81,7 @@ function stopMic() {
   document.getElementById('status').innerText = "KONOPEK";
 }
 
-// POBIERANIE LISTY
+// RESZTA FUNKCJI (BEZ ZMIAN)
 async function fetchTasks() {
   const list = document.getElementById('taskList');
   try {
