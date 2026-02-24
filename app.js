@@ -1,9 +1,10 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz76qW_v1mZW-fyLYsuj84CdrK-CH5u_6_KIAj6iPuTkUWRfIRuoDUow8HT-QQ6hgxc/exec"; 
 
 let mode = 'AGENT';
-let recognition = null;
+let recognition;
 let isListening = false;
 
+// ŻEŃSKA FORMA WYPOWIEDZI
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -15,64 +16,59 @@ function speak(text) {
   }
 }
 
-// FUNKCJA STARTUJĄCA MIKROFON - STWORZONA POD ANDROIDA
-async function handleMic() {
-  const btn = document.getElementById('micBtn');
-  const area = document.getElementById('cmd');
+// INICJALIZACJA MIKROFONU - PROSTA I STABILNA
+const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (Speech) {
+  recognition = new Speech();
+  recognition.lang = 'pl-PL';
+  recognition.continuous = true;
+  recognition.interimResults = true;
 
+  recognition.onresult = (event) => {
+    const area = document.getElementById('cmd');
+    let finalTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      }
+    }
+
+    if (finalTranscript) {
+      // DOPISYWANIE TEKSTU - NAJPROSTSZA METODA
+      area.value += finalTranscript.trim() + " ";
+      area.scrollTop = area.scrollHeight;
+    }
+  };
+
+  recognition.onstart = () => {
+    document.getElementById('status').innerText = "SŁUCHAM...";
+    document.getElementById('micBtn').classList.add('active');
+  };
+
+  recognition.onend = () => {
+    // Jeśli isListening jest true, to znaczy, że system sam przerwał (np. chwila ciszy)
+    // Wtedy restartujemy, dopóki użytkownik nie kliknie STOP
+    if (isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
+  };
+
+  recognition.onerror = (err) => {
+    console.error("Błąd mikrofonu:", err.error);
+    if (err.error !== 'no-speech') stopMic();
+  };
+}
+
+async function handleMic() {
   if (!isListening) {
     try {
-      // 1. Prośba o dostęp do sprzętu (wymuszenie na systemie)
+      // Prośba o dostęp
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // 2. Inicjalizacja silnika Web Speech
-      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!Speech) {
-        alert("Twoja przeglądarka nie wspiera mowy.");
-        return;
-      }
-
-      recognition = new Speech();
-      recognition.lang = 'pl-PL';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onstart = () => {
-        isListening = true;
-        btn.classList.add('active');
-        document.getElementById('status').innerText = "SŁUCHAM...";
-        if (navigator.vibrate) navigator.vibrate(50); // Krótka wibracja na start
-      };
-
-      recognition.onresult = (event) => {
-        let final = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
-          }
-        }
-        if (final) {
-          area.value += final.trim() + " ";
-          area.scrollTop = area.scrollHeight;
-          // Wymuszamy na Androidzie odświeżenie pola
-          area.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.error("Błąd mowy:", e.error);
-        stopMic();
-      };
-
-      recognition.onend = () => {
-        if (isListening) recognition.start(); // Auto-restart przy ciszy
-      };
-
+      isListening = true;
       recognition.start();
-
-    } catch (err) {
-      alert("Błąd: System odrzucił dostęp do mikrofonu.");
-      console.error(err);
+    } catch(e) {
+      alert("Brak uprawnień do mikrofonu!");
     }
   } else {
     stopMic();
@@ -81,10 +77,7 @@ async function handleMic() {
 
 function stopMic() {
   isListening = false;
-  if (recognition) {
-    recognition.stop();
-    recognition = null;
-  }
+  if (recognition) recognition.stop();
   document.getElementById('micBtn').classList.remove('active');
   document.getElementById('status').innerText = "KONOPEK";
 }
@@ -105,7 +98,7 @@ async function fetchTasks() {
         </div>`;
     });
   } catch (e) {
-    list.innerHTML = '<div style="text-align:center; opacity:0.2;">...</div>';
+    list.innerHTML = '';
   }
 }
 
